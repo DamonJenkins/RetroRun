@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine.h"
-#include "Components/PrimitiveComponent.h"
+#include "Math/UnrealMathUtility.h"
 #include "GameFramework/Pawn.h"
 #include "PlayerBase.generated.h"
 
@@ -32,10 +32,11 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	UPROPERTY(EditAnywhere, BluePrintReadWrite)
-		UPrimitiveComponent* physicsComp;
-
 protected:
 	float gravityScale = 1.0f;
+	float moveAccel = 100000.0f;
+	float maxSpeed = 1000.0f;
+
+	UStaticMeshComponent* mesh;
 
 };
