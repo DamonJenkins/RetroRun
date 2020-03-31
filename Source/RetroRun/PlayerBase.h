@@ -89,5 +89,5 @@ protected:
 
 private:
 	UStaticMeshComponent* mesh;
-
+	float meshHalfHeight = 0.0f;
 };

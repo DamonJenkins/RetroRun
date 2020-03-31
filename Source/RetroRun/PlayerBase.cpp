@@ -20,6 +20,10 @@ void APlayerBase::BeginPlay()
 
 	mesh = prims[0];
 
+	meshHalfHeight = 10.0f;
+
+	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::SanitizeFloat(meshHalfHeight));
+
 	dashTimer = dashDuration + 1.0f;
 }
 
@@ -80,8 +84,10 @@ void APlayerBase::StartJump() {
 	walled = false;
 
 	FHitResult hitRes;
-	FVector startVec = mesh->GetComponentLocation() + FVector(0.0f, 0.0f, -60);
-	FVector endVec = FVector(0.0f, 0.0f, -5.0f) + startVec;
+	FVector startVec = mesh->GetComponentLocation();
+	startVec += FVector(0.0f, 0.0f, meshHalfHeight);
+
+	FVector endVec = FVector(0.0f, 0.0f, -50.0f) + startVec;
 	FCollisionQueryParams collisionParams(FName(TEXT("Jump Trace")), true, this);
 
 	if (GetWorld()->LineTraceSingleByChannel(hitRes, startVec, endVec, ECC_WorldStatic, collisionParams)) {
