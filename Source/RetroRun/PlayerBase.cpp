@@ -14,17 +14,13 @@ APlayerBase::APlayerBase()
 void APlayerBase::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	TArray<UStaticMeshComponent*> prims;
-	GetComponents(prims);
-
-	mesh = prims[0];
-
-	meshHalfHeight = 10.0f;
-
-	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::SanitizeFloat(meshHalfHeight));
 
 	dashTimer = dashDuration + 1.0f;
+
+	JumpMaxHoldTime = timerMax;
+	JumpMaxCount = 2;
+
+	capsule = GetCapsuleComponent();
 }
 
 // Called every frame
@@ -36,6 +32,8 @@ void APlayerBase::Tick(float DeltaTime) {
 	}
 
 	if (dashing) {
+		GetCharacterMovement()->GravityScale = 0.0f;
+
 		//Lerp
 		SetActorLocation(
 			FMath::Lerp(dashStart, dashTarget, dashTimer / dashDuration),
@@ -44,21 +42,7 @@ void APlayerBase::Tick(float DeltaTime) {
 
 		if (dashTimer >= dashDuration) dashing = false;
 	} else {
-
-		FVector addForce(0.0f, 0.0f, -1.0f * gravityForce * gravityScale);
-
-		mesh->AddForce(addForce);
-
-		if (timer < timerMax) {
-			timer += DeltaTime;
-			if (timer >= timerMax) {
-				EndJump();
-			}
-		}
-
-		FVector newVel = mesh->GetPhysicsLinearVelocity();
-		newVel.Y = FMath::Clamp(newVel.Y, -maxSpeed, maxSpeed);
-		mesh->SetPhysicsLinearVelocity(newVel);
+		GetCharacterMovement()->GravityScale = 1.0f;
 	}
 }
 
@@ -68,105 +52,43 @@ void APlayerBase::SetupPlayerInputComponent(class UInputComponent* _inComp)
 	Super::SetupPlayerInputComponent(_inComp);
 
 	_inComp->BindAxis("plrMoveHorizontal", this, &APlayerBase::MoveHorizontal);
+	_inComp->BindAxis("plrMoveVertical");
 	
-	_inComp->BindAction("plrJump", IE_Pressed, this, &APlayerBase::StartJump);
-	_inComp->BindAction("plrJump", IE_Released, this, &APlayerBase::EndJump);
+	_inComp->BindAction("plrJump", IE_Pressed, this, &APlayerBase::Jump);
+	_inComp->BindAction("plrJump", IE_Released, this, &APlayerBase::StopJumping);
 
 	_inComp->BindAction("plrDash", IE_Pressed, this, &APlayerBase::Dash);
 }
 
 void APlayerBase::MoveHorizontal(float _lrAxis) {
-	if (dashing) return;
-	mesh->AddForce(FVector(0.0f, moveAccel * 1000.0f * _lrAxis, 0.0f));
-}
+	//if (dashing) return;
 
-void APlayerBase::StartJump() {
-	walled = false;
-
-	FHitResult hitRes;
-	FVector startVec = mesh->GetComponentLocation();
-	startVec += FVector(0.0f, 0.0f, meshHalfHeight);
-
-	FVector endVec = FVector(0.0f, 0.0f, -50.0f) + startVec;
-	FCollisionQueryParams collisionParams(FName(TEXT("Jump Trace")), true, this);
-
-	if (GetWorld()->LineTraceSingleByChannel(hitRes, startVec, endVec, ECC_WorldStatic, collisionParams)) {
-		if (hitRes.bBlockingHit) {
-			grounded = true;
-			doubleJumped = false;
-		}
-	} else {
-		grounded = false;
-
-		FVector wallcheckL = FVector(0.0f, -70.0f, 0.0f) + startVec;
-		FVector wallcheckR = FVector(0.0f,  70.0f, 0.0f) + startVec;
-		FVector jumpVec = FVector(0.0f, 0.0f, 1.0f);
-		if (GetWorld()->LineTraceSingleByChannel(hitRes, startVec, wallcheckL, ECC_WorldStatic, collisionParams)) {
-			//Wall Jump off the wall to the left of the character
-			if (hitRes.bBlockingHit) {
-				walled = true;
-				mesh->SetPhysicsLinearVelocity(jumpVec.RotateAngleAxis(-wallJumpAngle, FVector(1, 0, 0)) * jumpForce);
-
-				timer = 0.0f;
-			}
-		} else if (GetWorld()->LineTraceSingleByChannel(hitRes, startVec, wallcheckR, ECC_WorldStatic, collisionParams)) {
-			if (hitRes.bBlockingHit) {
-				walled = true;
-
-				mesh->SetPhysicsLinearVelocity(jumpVec.RotateAngleAxis(wallJumpAngle, FVector(1, 0, 0)) * jumpForce);
-
-				timer = 0.0f;
-			}
-		}
+	if (FMath::Abs(_lrAxis) > 0.05f) {
+		AddMovementInput(FVector(0, FMath::Sign(_lrAxis), 0), FMath::Abs(_lrAxis));
 	}
 
-	if (grounded) {
-		gravityScale = jumpGravityScale;
-		
-		FVector modVel = mesh->GetPhysicsLinearVelocity();
-		modVel.Z = jumpForce;
-		mesh->SetPhysicsLinearVelocity(modVel);
-
-		timer = 0.0f;
-		GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, "Jump");
-
-		dashing = false;
-	} else if (!doubleJumped && !walled) {
-		gravityScale = doubleJumpGravityScale;
-		
-		
-		FVector modVel = mesh->GetPhysicsLinearVelocity();
-		modVel.Z = jumpForce;
-		mesh->SetPhysicsLinearVelocity(modVel);
-
-		timer = 0.0f;
-		doubleJumped = true;
-		GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, "DoubleJump");
-
-		dashing = false;
-	}
-}
-
-void APlayerBase::EndJump() {
-	gravityScale = 1.0f;
 }
 
 void APlayerBase::Dash() {
 	if (dashing) return;
 	if (dashTimer < dashDuration + dashCooldown) return;
+
+	FVector aimDir = FVector(0.0f, GetInputAxisValue(FName("plrMoveHorizontal")), GetInputAxisValue(FName("plrMoveVertical")));
+
+	if (aimDir.Size() < 0.2f) return;
+
 	dashing = true;
 	dashTimer = 0.0f;
 
-	dashStart = mesh->GetComponentLocation();
+	dashStart = capsule->GetComponentLocation();
 
-	FVector aimDir = FVector(0.0f, GetInputAxisValue(FName("plrMoveHorizontal")), GetInputAxisValue(FName("plrMoveVertical")));
 	dashTarget = dashStart + (aimDir * dashLength);
 
-	FVector currVel = mesh->GetPhysicsLinearVelocity();
+	FVector currVel = capsule->GetPhysicsLinearVelocity();
 
 	float hComp = (aimDir.Y < 0.0f) == (currVel.Y < 0.0f) ? currVel.Y : 0.0f;
 	float vComp = (aimDir.Z < 0.0f) == (currVel.Z < 0.0f) ? currVel.Z : 0.0f;
 
-	mesh->SetPhysicsLinearVelocity(FVector(0.0f, hComp, vComp));
+	capsule->SetPhysicsLinearVelocity(FVector(0.0f, hComp, vComp));
 }
 

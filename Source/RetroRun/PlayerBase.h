@@ -6,11 +6,11 @@
 #include "Engine.h"
 #include "Math/UnrealMathUtility.h"
 #include "DrawDebugHelpers.h"
-#include "GameFramework/Pawn.h"
+#include "GameFramework/Character.h"
 #include "PlayerBase.generated.h"
 
 UCLASS()
-class RETRORUN_API APlayerBase : public APawn
+class RETRORUN_API APlayerBase : public ACharacter
 {
 	GENERATED_BODY()
 
@@ -23,8 +23,6 @@ protected:
 	virtual void BeginPlay() override;
 
 	void MoveHorizontal(float _lrAxis);
-	void StartJump();
-	void EndJump();
 	void Dash();
 
 public:	
@@ -35,24 +33,8 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 protected:
-	bool grounded = false;
-	bool doubleJumped = false;
-	bool walled = false;
-
-	float gravityScale = 1.0f;
-	
 	//Jump timer
-	float timer = 0.0f;
-	float timerMax = 0.7f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerStats")
-		float moveAccel = 100.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerStats")
-		float maxSpeed = 1000.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerStats")
-		float gravityForce = 50000.0f;
+	float timerMax = 0.4f;
 
 	bool dashing;
 	float dashTimer;
@@ -71,23 +53,6 @@ protected:
 		/*The maximum distance (in cm) of a dash*/
 		float dashLength = 150.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerStats")
-		float jumpForce = 900.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerStats")
-		float jumpGravityScale = 0.6f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerStats")
-		float doubleJumpGravityScale = 0.8f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerStats")
-		float wallJumpGravityScale = 0.8f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerStats")
-		/*The angle (in degrees) the player jumps away from walls*/
-		float wallJumpAngle = 45.0f;
-
 private:
-	UStaticMeshComponent* mesh;
-	float meshHalfHeight = 0.0f;
+	UCapsuleComponent* capsule;
 };
