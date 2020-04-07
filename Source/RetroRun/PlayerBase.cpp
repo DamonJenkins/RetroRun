@@ -22,6 +22,8 @@ void APlayerBase::BeginPlay()
 
 	capsule = GetCapsuleComponent();
 	skelMesh = GetMesh();
+
+	skelMesh->SetRelativeRotation(FRotator(0.0f, 0.0f, 0.0f));
 }
 
 // Called every frame
