@@ -21,6 +21,7 @@ void APlayerBase::BeginPlay()
 	JumpMaxCount = 2;
 
 	capsule = GetCapsuleComponent();
+	skelMesh = GetMesh();
 }
 
 // Called every frame
@@ -65,6 +66,7 @@ void APlayerBase::MoveHorizontal(float _lrAxis) {
 
 	if (FMath::Abs(_lrAxis) > 0.05f) {
 		AddMovementInput(FVector(0, FMath::Sign(_lrAxis), 0), FMath::Abs(_lrAxis));
+		skelMesh->SetRelativeRotation(FRotator(0.0f, _lrAxis > 0.0f ? 0.0f : 180.0f, 0.0f));
 	}
 
 }

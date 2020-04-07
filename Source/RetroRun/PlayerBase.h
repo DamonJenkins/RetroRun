@@ -55,4 +55,5 @@ protected:
 
 private:
 	UCapsuleComponent* capsule;
+	USkeletalMeshComponent* skelMesh;
 };
