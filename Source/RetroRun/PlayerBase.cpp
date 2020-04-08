@@ -17,7 +17,7 @@ void APlayerBase::BeginPlay()
 
 	dashTimer = dashDuration + 1.0f;
 
-	JumpMaxHoldTime = timerMax;
+	JumpMaxHoldTime = jumpDuration;
 	JumpMaxCount = 2;
 
 	capsule = GetCapsuleComponent();
