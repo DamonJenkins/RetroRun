@@ -34,7 +34,9 @@ public:
 
 protected:
 	//Jump timer
-	float timerMax = 0.4f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PlayerStats")
+		/*How long a max height jump lasts for*/
+		float jumpDuration = 0.4f;
 
 	bool dashing;
 	float dashTimer;
